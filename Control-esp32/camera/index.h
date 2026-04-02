@@ -1,3 +1,6 @@
+#include <pgmspace.h>
+
+const char index_html[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -163,3 +166,4 @@
     </script>
 </body>
 </html>
+)=====";

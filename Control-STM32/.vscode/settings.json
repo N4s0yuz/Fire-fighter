@@ -1,3 +1,4 @@
 {
-    "github.copilot.chat.responsesApiContextManagement.enabled": false
+    "github.copilot.chat.responsesApiContextManagement.enabled": false,
+    "cmake.sourceDirectory": "D:\\Fire-fighter\\Control-STM32\\Test\\CMakeLists.txt"
 }
