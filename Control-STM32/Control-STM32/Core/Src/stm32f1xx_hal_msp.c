@@ -240,25 +240,25 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 
     /* USER CODE END TIM2_MspPostInit 1 */
   }
-  else if(htim->Instance==TIM3)
+  else if(htim->Instance==TIM4)
   {
-    /* USER CODE BEGIN TIM3_MspPostInit 0 */
+    /* USER CODE BEGIN TIM4_MspPostInit 0 */
 
-    /* USER CODE END TIM3_MspPostInit 0 */
+    /* USER CODE END TIM4_MspPostInit 0 */
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**TIM3 GPIO Configuration
-    PA6     ------> TIM3_CH1
-    PA7     ------> TIM3_CH2
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /**TIM4 GPIO Configuration
+    PB6     ------> TIM4_CH1
+    PB7     ------> TIM4_CH2
     */
     GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* USER CODE BEGIN TIM3_MspPostInit 1 */
+    /* USER CODE BEGIN TIM4_MspPostInit 1 */
 
-    /* USER CODE END TIM3_MspPostInit 1 */
+    /* USER CODE END TIM4_MspPostInit 1 */
   }
 
 }
@@ -338,6 +338,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    /* USART1 interrupt Init */
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
     /* USER CODE BEGIN USART1_MspInit 1 */
 
     /* USER CODE END USART1_MspInit 1 */
@@ -368,6 +371,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
 
+    /* USART1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(USART1_IRQn);
     /* USER CODE BEGIN USART1_MspDeInit 1 */
 
     /* USER CODE END USART1_MspDeInit 1 */

@@ -33,9 +33,10 @@
             background-color: #f8fafc;
             border: 1px dashed #2563eb;
             text-align: left;
-            font-family: Times New Roman;
+            font-family: 'Courier New', monospace; /* Đổi font cho dễ đọc số */
             font-size: 14px;
             color: #1e293b;
+            line-height: 1.5;
         }
         h3 { 
             margin-top: 0; font-size: 16px;
@@ -63,19 +64,18 @@
             cursor: pointer;
             border: 2px solid #f1f5f9;
         }
-        .maybomnuoc {
-            width: 100%; background-color: #ef4444;
-            border: none; color: #ffffff;
-            padding: 15px; font-size: 16px; font-weight: bold;
+        .btn-control {
+            width: 100%; border: none; color: #ffffff;
+            padding: 12px; font-size: 14px; font-weight: bold;
             cursor: pointer; margin-top: 10px;
-            border-radius: 4px;
-            text-transform: uppercase;
+            border-radius: 4px; text-transform: uppercase;
         }
-        .maybomnuoc.active { 
-            background-color: #b91c1c; 
-            color: #fca5a5;
-        }
+        .btn-pump { background-color: #ef4444; }
+        .btn-pump.active { background-color: #7f1d1d; }
+        .btn-auto { background-color: #10b981; }
+        .btn-auto.active { background-color: #064e3b; }
         .brake-label { font-weight: bold; color: #475569; cursor: pointer; display: block; margin-bottom: 10px;}
+        .disabled-ui { opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -83,57 +83,97 @@
         <h3>Camera</h3>
         <div id="status-text" class="status">Trạng thái: Đang kết nối...</div>
         <img id="stream" src="" alt="">
-        <div class="sensor-box">
-            Dữ liệu cảm biến: <span id="sensor-val">---</span>
-        </div>
+        <div class="sensor-box" id="sensor-val">Đang đợi dữ liệu...</div>
     </div>
+    
     <div class="box controlbox">
         <h3>Điều khiển Robot</h3>
-        <label class="brake-label">
-            <input type="checkbox" id="chk-brake" checked> Phanh tự động
-        </label>
-        <div class="joy-bg" id="joy-bg">
-            <div class="joy-stick" id="joy-stick"></div>
+        
+        <button id="btn-auto" class="btn-control btn-auto">BẬT TỰ ĐỘNG</button>
+        
+        <div id="manual-controls">
+            <label class="brake-label" style="margin-top: 15px;">
+                <input type="checkbox" id="chk-brake" checked> Phanh tự động
+            </label>
+            <div class="joy-bg" id="joy-bg">
+                <div class="joy-stick" id="joy-stick"></div>
+            </div>
+            <button id="maybomnuoc" class="btn-control btn-pump">BẬT BƠM NƯỚC</button>
         </div>
-        <button id="maybomnuoc" class="maybomnuoc">BẬT BƠM NƯỚC</button>
     </div>
+
     <script>
-        let motorL = 0, motorR = 0, pumpActive = 0;
+        let motorL = 0, motorR = 0, pumpActive = 0, autoMode = 0;
         const gateway = `ws://${window.location.hostname}/ws`;
         let ws;
         const statusText = document.getElementById('status-text');
+
         window.onload = () => {
             document.getElementById('stream').src = `http://${window.location.hostname}:81/stream`;
             connectWS();
         };
+
         function connectWS() {
             ws = new WebSocket(gateway);
             ws.onopen = () => { statusText.innerText = "Trạng thái: Đã kết nối"; statusText.style.color="#16a34a"; };
             ws.onclose = () => { statusText.innerText = "Trạng thái: Mất kết nối"; statusText.style.color="#dc2626"; setTimeout(connectWS, 2000); };
             ws.onmessage = (e) => {
-                document.getElementById('sensor-val').innerText = e.data;
+                try {
+                    let obj = JSON.parse(e.data);
+                    document.getElementById('sensor-val').innerHTML = 
+                        `Lửa: <b>${obj.C.toFixed(0)}</b> | Góc: <b>${obj.G.toFixed(0)}°</b><br>` +
+                        `K/C Trước: <b>${obj.F}</b> cm | Sau: <b>${obj.B}</b> cm<br>` +
+                        `K/C Trái: <b>${obj.L}</b> cm | Phải: <b>${obj.R}</b> cm`;
+                } catch(err) {
+                    document.getElementById('sensor-val').innerText = e.data; 
+                }
             };
         }
+
         function sendCommand() {
             let autoBrake = document.getElementById('chk-brake').checked ? 1 : 0;
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ L: motorL, R: motorR, A: autoBrake, P: pumpActive }));
+                ws.send(JSON.stringify({ L: motorL, R: motorR, A: autoBrake, P: pumpActive, M: autoMode }));
             }
         }
+        setInterval(sendCommand, 500);
+
+        // Nút Bơm
         const btnPump = document.getElementById('maybomnuoc');
         btnPump.onclick = function() {
             pumpActive = (pumpActive === 0) ? 1 : 0;
             this.classList.toggle('active', pumpActive === 1);
-            this.innerText = pumpActive ? "ĐANG BƠM" : "BẬT BƠM NƯỚC";
+            this.innerText = pumpActive ? "ĐANG BƠM NƯỚC..." : "BẬT BƠM NƯỚC";
             sendCommand();
         };
+
+        const btnAuto = document.getElementById('btn-auto');
+        const manualControls = document.getElementById('manual-controls');
+        btnAuto.onclick = function() {
+            autoMode = (autoMode === 0) ? 1 : 0;
+            this.classList.toggle('active', autoMode === 1);
+            this.innerText = autoMode ? "ĐANG CHẠY TỰ ĐỘNG" : "BẬT TỰ ĐỘNG (LOGIC MỜ)";
+            if(autoMode === 1) {
+                manualControls.classList.add('disabled-ui');
+                motorL = 0; motorR = 0; pumpActive = 0;
+                btnPump.classList.remove('active');
+                btnPump.innerText = "BẬT BƠM NƯỚC";
+            } else {
+                manualControls.classList.remove('disabled-ui');
+            }
+            sendCommand();
+        };
+
         document.getElementById('chk-brake').onchange = sendCommand;
+
+        // Joystick Logic
         const bg = document.getElementById('joy-bg');
         const stick = document.getElementById('joy-stick');
         let isDragging = false;
         const maxR = bg.clientWidth / 2 - stick.clientWidth / 2; 
+        
         function moveJoy(clientX, clientY) {
-            if (!isDragging) return;
+            if (!isDragging || autoMode === 1) return;
             const rect = bg.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
             const cy = rect.top + rect.height / 2;
@@ -142,18 +182,21 @@
             let dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
             stick.style.transform = `translate(${dx}px, ${dy}px)`;
+            
             let fwd = (-dy / maxR) * 255; 
             let turn = (dx / maxR) * 255;
             motorL = Math.round(Math.max(-255, Math.min(255, fwd + turn)));
             motorR = Math.round(Math.max(-255, Math.min(255, fwd - turn)));
             sendCommand();
         }
+
         function stopJoy() {
             isDragging = false;
             stick.style.transform = `translate(0px, 0px)`;
             motorL = 0; motorR = 0;
             sendCommand();
         }
+
         stick.onmousedown = () => isDragging = true;
         document.onmousemove = (e) => moveJoy(e.clientX, e.clientY);
         document.onmouseup = stopJoy;
