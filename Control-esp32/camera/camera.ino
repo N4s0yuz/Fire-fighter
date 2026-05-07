@@ -82,14 +82,9 @@ esp_err_t ws_handler(httpd_req_t *req) {
         StaticJsonDocument<200> doc;
         if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
           int L = doc["L"]; int R = doc["R"]; 
-          int A = doc["A"]; int P = doc["P"]; int M = doc["M"];
+          int P = doc["P"]; int M = doc["M"];
           String V = doc["V"] | "";
 
-          if (A != abs_on) {
-              abs_on = A;
-              Serial.print(A == 1 ? 'Y' : 'X');
-              delay(5); 
-          }
           char cmd = 'S';
           if (M == 1) { 
               cmd = '1';
