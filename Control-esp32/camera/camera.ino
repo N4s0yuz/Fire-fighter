@@ -26,7 +26,7 @@ const char* password = "12345678";
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
 
-String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0}";
+String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\",\"B\":0}";
 int abs_on = 1; 
 httpd_handle_t control_httpd = NULL; 
 httpd_handle_t stream_httpd = NULL;  
