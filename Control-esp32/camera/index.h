@@ -231,6 +231,10 @@ const char index_html[] PROGMEM = R"=====(
                                 <div class="sensor-value">${obj.L}<span>cm</span></div>
                             </div>
                             <div class="sensor-card">
+                                <div class="sensor-label">Sau</div>
+                                <div class="sensor-value">${obj.B}<span>cm</span></div>
+                            </div>
+                            <div class="sensor-card">
                                 <div class="sensor-label">Phải</div>
                                 <div class="sensor-value">${obj.R}<span>cm</span></div>
                             </div>
