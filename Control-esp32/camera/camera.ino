@@ -27,6 +27,7 @@ const char* password = "06120404";
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
 
+
 String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0,\"B\":0,\"ML\":0,\"MR\":0}";
 
 httpd_handle_t control_httpd = NULL; 
@@ -81,30 +82,40 @@ esp_err_t ws_handler(httpd_req_t *req) {
   esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
   if (ret != ESP_OK) return ret;
 
-  if (ws_pkt.len && ws_pkt.len < sizeof(buf)) {
-    ws_pkt.payload = buf;
-    ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-    
-    if (ret == ESP_OK) {
-      buf[ws_pkt.len] = '\0'; 
-      
-      StaticJsonDocument<200> doc;
-      if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
-        int L = doc["L"]; int R = doc["R"]; 
-        int P = doc["P"]; int M = doc["M"];
-        String V = doc["V"] | "";
-        char cmd = 'S';
-        if (M == 1) { 
-            cmd = '1';
-        } else {
-            if (P == 1) cmd = 'P';
-            else if (V == "Q") cmd = 'Q';
-            else if (V == "E") cmd = 'E';
-            else if (L > 100 && R > 100) cmd = 'F';
-            else if (L < -100 && R < -100) cmd = 'B'; 
-            else if (L < -50 && R > 50) cmd = 'L'; 
-            else if (L > 50 && R < -50) cmd = 'R'; 
-            else cmd = 'S'; 
+  if (ws_pkt.len) {
+    uint8_t *buf = (uint8_t*)calloc(1, ws_pkt.len + 1); 
+    if (buf) {
+      ws_pkt.payload = buf;
+      ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+      if (ret == ESP_OK) {
+        buf[ws_pkt.len] = 0;
+        StaticJsonDocument<200> doc;
+        if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
+          int L = doc["L"]; int R = doc["R"]; 
+          int P = doc["P"]; int M = doc["M"];
+          String V = doc["V"] | "";
+
+          char cmd = 'S';
+          if (M == 1) { 
+              cmd = '1';
+          } else {
+              if (P == 1) cmd = 'P';
+              else if (V == "Q") cmd = 'Q';
+              else if (V == "E") cmd = 'E';
+              else if (L > 100 && R > 100) cmd = 'F';
+              else if (L < -100 && R < -100) cmd = 'B'; 
+              else if (L < -50 && R > 50) cmd = 'L'; 
+              else if (L > 50 && R < -50) cmd = 'R'; 
+              else cmd = 'S'; 
+          }
+          Serial.print(cmd);
+
+          httpd_ws_frame_t ws_resp;
+          memset(&ws_resp, 0, sizeof(httpd_ws_frame_t));
+          ws_resp.payload = (uint8_t*)latest_sensor_data.c_str();
+          ws_resp.len = latest_sensor_data.length();
+          ws_resp.type = HTTPD_WS_TYPE_TEXT;
+          httpd_ws_send_frame(req, &ws_resp);
         }
         Serial.print(cmd);
         httpd_ws_frame_t ws_resp;

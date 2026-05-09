@@ -333,6 +333,10 @@ const char index_html[] PROGMEM = R"=====(
                                 <div class="sensor-value">${l.toFixed(0)}<span>cm</span></div>
                             </div>
                             <div class="sensor-card">
+                                <div class="sensor-label">Sau</div>
+                                <div class="sensor-value">${obj.B}<span>cm</span></div>
+                            </div>
+                            <div class="sensor-card">
                                 <div class="sensor-label">Phải</div>
                                 <div class="sensor-value">${r.toFixed(0)}<span>cm</span></div>
                             </div>
