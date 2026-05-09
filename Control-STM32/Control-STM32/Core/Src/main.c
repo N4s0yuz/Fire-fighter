@@ -62,8 +62,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-  #define NGUONG_DAP_LUA   3900
-  #define NGUONG_THEO_LUA  1500
+  #define NGUONG_DAP_LUA   4000
+  #define NGUONG_THEO_LUA  1000
   #define LUA_ADC_GIAM_KHI_SANG 1
   #define LUA_DELTA_MIN    100
   uint16_t adc_tinh[5] = {0};
