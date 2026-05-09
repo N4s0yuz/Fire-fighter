@@ -6,9 +6,10 @@
 #include "soc/rtc_cntl_reg.h"
 #include "index.h"
 
-const char* ssid = "Nam";
-const char* password = "12345678";
+const char* ssid = "Nam Son";
+const char* password = "06120404";
 
+// --- KHAI BÁO CHÂN CAMERA ---
 #define PWDN_GPIO_NUM 32
 #define RESET_GPIO_NUM -1
 #define XCLK_GPIO_NUM 0
@@ -26,8 +27,8 @@ const char* password = "12345678";
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
 
-String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0}";
-int abs_on = 1; 
+String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0,\"B\":0,\"ML\":0,\"MR\":0}";
+
 httpd_handle_t control_httpd = NULL; 
 httpd_handle_t stream_httpd = NULL;  
 
@@ -36,6 +37,7 @@ static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" 
 static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
 
+// --- HÀM STREAM CAMERA ---
 esp_err_t stream_handler(httpd_req_t *req) {
   camera_fb_t * fb = NULL;
   esp_err_t res = ESP_OK;
@@ -43,10 +45,12 @@ esp_err_t stream_handler(httpd_req_t *req) {
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
   res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
   if(res != ESP_OK) return res;
+  
   while(true){
     fb = esp_camera_fb_get();
-    if (!fb) { res = ESP_FAIL; } 
-    else {
+    if (!fb) { 
+        res = ESP_FAIL; 
+    } else {
       size_t hlen = snprintf(part_buf, 64, _STREAM_PART, fb->len);
       res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
       if(res == ESP_OK) res = httpd_resp_send_chunk(req, (const char *)fb->buf, fb->len);
@@ -64,61 +68,59 @@ esp_err_t index_handler(httpd_req_t *req) {
   return httpd_resp_send(req, index_html, strlen(index_html));
 }
 
+// --- HÀM WEBSOCKET ---
 esp_err_t ws_handler(httpd_req_t *req) {
   if (req->method == HTTP_GET) return ESP_OK; 
   httpd_ws_frame_t ws_pkt;
   memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
   ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+  
+  // Dùng bộ đệm Stack, chống phân mảnh Heap
+  uint8_t buf[256]; 
+  
   esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
   if (ret != ESP_OK) return ret;
 
-  if (ws_pkt.len) {
-    uint8_t *buf = (uint8_t*)calloc(1, ws_pkt.len + 1); 
-    if (buf) {
-      ws_pkt.payload = buf;
-      ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-      if (ret == ESP_OK) {
-        buf[ws_pkt.len] = 0;
-        StaticJsonDocument<200> doc;
-        if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
-          int L = doc["L"]; int R = doc["R"]; 
-          int A = doc["A"]; int P = doc["P"]; int M = doc["M"];
-          String V = doc["V"] | "";
-
-          if (A != abs_on) {
-              abs_on = A;
-              Serial.print(A == 1 ? 'Y' : 'X');
-              delay(5); 
-          }
-          char cmd = 'S';
-          if (M == 1) { 
-              cmd = '1';
-          } else {
-              if (P == 1) cmd = 'P';
-              else if (V == "Q") cmd = 'Q';
-              else if (V == "E") cmd = 'E';
-              else if (L > 100 && R > 100) cmd = 'F';
-              else if (L < -100 && R < -100) cmd = 'B'; 
-              else if (L < -50 && R > 50) cmd = 'L'; 
-              else if (L > 50 && R < -50) cmd = 'R'; 
-              else cmd = 'S'; 
-          }
-          Serial.print(cmd);
-
-          httpd_ws_frame_t ws_resp;
-          memset(&ws_resp, 0, sizeof(httpd_ws_frame_t));
-          ws_resp.payload = (uint8_t*)latest_sensor_data.c_str();
-          ws_resp.len = latest_sensor_data.length();
-          ws_resp.type = HTTPD_WS_TYPE_TEXT;
-          httpd_ws_send_frame(req, &ws_resp);
+  if (ws_pkt.len && ws_pkt.len < sizeof(buf)) {
+    ws_pkt.payload = buf;
+    ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+    
+    if (ret == ESP_OK) {
+      buf[ws_pkt.len] = '\0'; 
+      
+      StaticJsonDocument<200> doc;
+      if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
+        int L = doc["L"]; int R = doc["R"]; 
+        int P = doc["P"]; int M = doc["M"];
+        String V = doc["V"] | "";
+        char cmd = 'S';
+        if (M == 1) { 
+            cmd = '1';
+        } else {
+            if (P == 1) cmd = 'P';
+            else if (V == "Q") cmd = 'Q';
+            else if (V == "E") cmd = 'E';
+            else if (L > 100 && R > 100) cmd = 'F';
+            else if (L < -100 && R < -100) cmd = 'B'; 
+            else if (L < -50 && R > 50) cmd = 'L'; 
+            else if (L > 50 && R < -50) cmd = 'R'; 
+            else cmd = 'S'; 
         }
+        Serial.print(cmd);
+        httpd_ws_frame_t ws_resp;
+        memset(&ws_resp, 0, sizeof(httpd_ws_frame_t));
+        ws_resp.payload = (uint8_t*)latest_sensor_data.c_str();
+        ws_resp.len = latest_sensor_data.length();
+        ws_resp.type = HTTPD_WS_TYPE_TEXT;
+        
+        httpd_ws_send_frame(req, &ws_resp);
       }
-      free(buf);
     }
   }
   return ret;
 }
- void startServers() {
+
+void startServers() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.server_port = 80;
   config.ctrl_port = 32768;
@@ -128,6 +130,7 @@ esp_err_t ws_handler(httpd_req_t *req) {
     httpd_register_uri_handler(control_httpd, &index_uri);
     httpd_register_uri_handler(control_httpd, &ws_uri);
   }
+  
   config.server_port = 81;
   config.ctrl_port = 32769; 
   if (httpd_start(&stream_httpd, &config) == ESP_OK) {
@@ -138,7 +141,9 @@ esp_err_t ws_handler(httpd_req_t *req) {
 
 void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
-  Serial.begin(115200);
+
+  Serial.begin(115200); 
+  
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0; config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM; config.pin_d1 = Y3_GPIO_NUM; config.pin_d2 = Y4_GPIO_NUM;
@@ -154,7 +159,9 @@ void setup() {
   } else {
     config.frame_size = FRAMESIZE_QVGA; config.jpeg_quality = 15; config.fb_count = 1;
   }
+  
   if (esp_camera_init(&config) != ESP_OK) { return; }
+  
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) 
   { 

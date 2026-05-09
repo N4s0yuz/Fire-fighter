@@ -62,8 +62,8 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-  #define NGUONG_DAP_LUA   950
-  #define NGUONG_THEO_LUA  450
+  #define NGUONG_DAP_LUA   3900
+  #define NGUONG_THEO_LUA  1500
   #define LUA_ADC_GIAM_KHI_SANG 1
   #define LUA_DELTA_MIN    100
   uint16_t adc_tinh[5] = {0};
@@ -77,6 +77,8 @@
   uint16_t kc_trai = 0;
   uint16_t kc_phai = 0;
   uint16_t kc_sau = 0;
+  int pwm_motor_trai = 0;
+  int pwm_motor_phai = 0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -113,7 +115,7 @@ static void MX_USART1_UART_Init(void);
   void Send_ESP32_Data(void);
   uint16_t HCSR04_Read_PB5(uint8_t id);
   void delay_us(uint16_t us);
-  void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai);
+  void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai, uint16_t d_sau);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -255,7 +257,7 @@ int main(void)
               HAL_GPIO_WritePin(RELAY_PORT, RELAY_PIN, GPIO_PIN_RESET);
               __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 1500);
 
-              Thuat_toan_vat_can(kc_trai, kc_truoc, kc_phai); 
+              Thuat_toan_vat_can(kc_trai, kc_truoc, kc_phai, kc_sau); 
           }
     }
     else
@@ -264,31 +266,21 @@ int main(void)
       thoi_gian_phun_nuoc = 0;
       if (lenh_dieu_khien != 'P') HAL_GPIO_WritePin(RELAY_PORT, RELAY_PIN, GPIO_PIN_RESET);
 
-      if (lenh_dieu_khien == 'X') 
-      { 
-        abs_on= 0; Di_chuyen(0,0); 
-      }
-      else if (lenh_dieu_khien == 'Y') 
-      { abs_on = 1; Di_chuyen(0,0);
-      }
-
       if (lenh_dieu_khien == 'F')
       {
-          if (abs_on == 1 &&kc_truoc <= 10) Di_chuyen(0, 0); 
-          else Di_chuyen(550, 550);
+          Di_chuyen(600, 600);
       }
       else if (lenh_dieu_khien == 'B') 
       {
-          if ( abs_on == 1 && kc_sau <= 10) Di_chuyen(0, 0); 
-          else Di_chuyen(-550, -550);
+          Di_chuyen(-600, -600);
       }
       else if (lenh_dieu_khien == 'L') 
       {
-          Di_chuyen(-650, 650);
+          Di_chuyen(-600, 600);
       }
       else if (lenh_dieu_khien == 'R') 
       {
-          Di_chuyen(650, -650); 
+          Di_chuyen(600, -600); 
       }
       else if (lenh_dieu_khien == 'P') 
       {
@@ -300,12 +292,14 @@ int main(void)
           Di_chuyen(0, 0);
           uint32_t pwm = __HAL_TIM_GET_COMPARE(&htim2, TIM_CHANNEL_2);
           if (pwm <= 2450) __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwm + 50);
+          lenh_dieu_khien = '0';
       }
       else if (lenh_dieu_khien == 'E') 
       {
           Di_chuyen(0, 0);
           uint32_t pwm = __HAL_TIM_GET_COMPARE(&htim2, TIM_CHANNEL_2);
           if (pwm >= 550) __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwm - 50);
+          lenh_dieu_khien = '0';
       }
       else
       {
@@ -760,6 +754,9 @@ static void MX_GPIO_Init(void)
 
   void Di_chuyen(int v_L, int v_R) 
   {
+      pwm_motor_trai = v_L;
+      pwm_motor_phai = v_R;
+
       if (v_R >= 0) {
           HAL_GPIO_WritePin(IN1_PORT, IN1_PIN, GPIO_PIN_SET);
           HAL_GPIO_WritePin(IN2_PORT, IN2_PIN, GPIO_PIN_RESET);
@@ -781,9 +778,10 @@ static void MX_GPIO_Init(void)
       }
   }
   void Send_ESP32_Data(void) {
-      char data[120];
-      sprintf(data, "{\"C\":%d,\"G\":%d,\"F\":%d,\"L\":%d,\"R\":%d,\"B\":%d}\n", 
-              (int)cuong_do, (int)goc_lech, kc_truoc, kc_trai, kc_phai, kc_sau);
+      char data[160];
+      sprintf(data, "{\"C\":%d,\"G\":%d,\"F\":%d,\"L\":%d,\"R\":%d,\"B\":%d,\"ML\":%d,\"MR\":%d}\n", 
+              (int)cuong_do, (int)goc_lech, kc_truoc, kc_trai, kc_phai, kc_sau,
+              pwm_motor_trai, pwm_motor_phai);
       HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
   }
   void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -848,8 +846,8 @@ static void MX_GPIO_Init(void)
 
   float tinh_do_gan_truoc(float d) {
       if (d <= 18.0f) return 1.0f;
-      if (d >= 42.0f) return 0.0f;
-      return (42.0f - d) / 24.0f;
+      if (d >= 45.0f) return 0.0f;
+      return (45.0f - d) / 27.0f;
   }
 
   float tinh_do_gan_ben(float d) {
@@ -858,27 +856,36 @@ static void MX_GPIO_Init(void)
       return (34.0f - d) / 18.0f;
   }
 
-  void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai) 
-  {
-      static float d_trai_loc = 60.0f;
-      static float d_truoc_loc = 60.0f;
-      static float d_phai_loc = 60.0f;
-      static int v_L_cu = 0;
-      static int v_R_cu = 0;
-      static int huong_ne = 1;
+  float tinh_do_gan_sau(float d) {
+      if (d <= 16.0f) return 1.0f;
+      if (d >= 36.0f) return 0.0f;
+      return (36.0f - d) / 20.0f;
+  }
 
-      d_trai = loc_khoang_cach(d_trai, (uint16_t)d_trai_loc);
-      d_truoc = loc_khoang_cach(d_truoc, (uint16_t)d_truoc_loc);
-      d_phai = loc_khoang_cach(d_phai, (uint16_t)d_phai_loc);
+  void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai, uint16_t d_sau) 
+{
+    static float d_trai_loc = 60.0f;
+    static float d_truoc_loc = 60.0f;
+    static float d_phai_loc = 60.0f;
+    static float d_sau_loc = 60.0f;
+    static int v_L_cu = 0;
+    static int v_R_cu = 0;
+    static int huong_ne = 1;
 
-      d_trai_loc = cap_nhat_khoang_cach_loc(d_trai_loc, d_trai);
-      d_truoc_loc = cap_nhat_khoang_cach_loc(d_truoc_loc, d_truoc);
-      d_phai_loc = cap_nhat_khoang_cach_loc(d_phai_loc, d_phai);
+    d_trai = loc_khoang_cach(d_trai, (uint16_t)d_trai_loc);
+    d_truoc = loc_khoang_cach(d_truoc, (uint16_t)d_truoc_loc);
+    d_phai = loc_khoang_cach(d_phai, (uint16_t)d_phai_loc);
+    d_sau = loc_khoang_cach(d_sau, (uint16_t)d_sau_loc);
 
-      if (d_phai_loc > d_trai_loc + 4.0f) huong_ne = 1;
-      else if (d_trai_loc > d_phai_loc + 4.0f) huong_ne = -1;
+    d_trai_loc = cap_nhat_khoang_cach_loc(d_trai_loc, d_trai);
+    d_truoc_loc = cap_nhat_khoang_cach_loc(d_truoc_loc, d_truoc);
+    d_phai_loc = cap_nhat_khoang_cach_loc(d_phai_loc, d_phai);
+    d_sau_loc = cap_nhat_khoang_cach_loc(d_sau_loc, d_sau);
 
-      if (d_truoc_loc <= 18.0f)
+    if (d_phai_loc > d_trai_loc + 4.0f) huong_ne = 1;
+    else if (d_trai_loc > d_phai_loc + 4.0f) huong_ne = -1;
+
+    if (d_truoc_loc <= 18.0f)
       {
           v_L_cu = -600;
           v_R_cu = -600;
@@ -945,7 +952,7 @@ static void MX_GPIO_Init(void)
           return;
       }
 
-      if (d_trai_loc <= 22.0f && d_phai_loc > d_trai_loc + 4.0f)
+      if (d_trai_loc <= 22.0f && d_phai_loc > d_trai_loc + 3.0f)
       {
           v_L_cu = 620;
           v_R_cu = 320;
@@ -961,50 +968,85 @@ static void MX_GPIO_Init(void)
           return;
       }
 
-      float L_gan = tinh_do_gan_ben(d_trai_loc);  
-      float L_xa = 1.0f - L_gan;
-      float F_gan = tinh_do_gan_truoc(d_truoc_loc); 
-      float F_xa = 1.0f - F_gan;
-      float R_gan = tinh_do_gan_ben(d_phai_loc);  
-      float R_xa = 1.0f - R_gan;
+    if (d_trai_loc <= 22.0f && d_phai_loc > d_trai_loc + 4.0f)
+    {
+        v_L_cu = 620;
+        v_R_cu = 320;
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
 
-      float W1 = L_xa * F_xa * R_xa;
-      float W2 = L_gan * F_xa * R_xa;
-      float W3 = L_xa * F_xa * R_gan;
-      float W4 = L_xa * F_gan * R_xa;
-      float W5 = L_gan * F_gan * R_xa;
-      float W6 = L_xa * F_gan * R_gan;
-      float W7 = L_gan * F_xa * R_gan;
-      float W8 = L_gan * F_gan * R_gan;
+    if (d_phai_loc <= 22.0f && d_trai_loc > d_phai_loc + 4.0f)
+    {
+        v_L_cu = 320;
+        v_R_cu = 620;
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
 
-      float L_pwm[] = {620,  720,  280,  620,  650, -650,  460, -560};
-      float R_pwm[] = {620,  280,  720, -620, -650,  650,  460, -560};
+    float L_gan = tinh_do_gan_ben(d_trai_loc);  
+    float L_xa = 1.0f - L_gan;
+    float F_gan = tinh_do_gan_truoc(d_truoc_loc); 
+    float F_xa = 1.0f - F_gan;
+    float R_gan = tinh_do_gan_ben(d_phai_loc);  
+    float R_xa = 1.0f - R_gan;
+    float B_gan = tinh_do_gan_sau(d_sau_loc);
+    float B_xa = 1.0f - B_gan;
 
+    float W1 = L_xa * F_xa * R_xa;
+    float W2 = L_gan * F_xa * R_xa;
+    float W3 = L_xa * F_xa * R_gan;
+    float W4 = L_xa * F_gan * R_xa;
+    float W5 = L_gan * F_gan * R_xa;
+    float W6 = L_xa * F_gan * R_gan;
+    float W7 = L_gan * F_xa * R_gan;
+    float W8 = L_gan * F_gan * R_gan * B_xa;
+    float W9 = L_gan * F_gan * R_gan * B_gan;
 
-     if (huong_ne < 0) {
-      L_pwm[3] = -520; R_pwm[3] =  520;
-      L_pwm[7] = -420; R_pwm[7] = -560;
-      } else {
-      L_pwm[3] =  520; R_pwm[3] = -520;
-      L_pwm[7] = -560; R_pwm[7] = -420;
-      }
+    float L_pwm[] = {620,  720,  320,  620,  650, -650,  460, -560,  560};
+    float R_pwm[] = {620,  320,  720, -620, -650,  650,  460, -560, -560};
 
+    if (huong_ne < 0) {
+        L_pwm[3] = -520; R_pwm[3] =  520;
+        L_pwm[7] = -420; R_pwm[7] = -560;
+        L_pwm[8] = -560; R_pwm[8] =  560;
+    } else {
+        L_pwm[3] =  520; R_pwm[3] = -520;
+        L_pwm[7] = -560; R_pwm[7] = -420;
+        L_pwm[8] =  560; R_pwm[8] = -560;
+    }
 
-      float tong_W = W1 + W2 + W3 + W4 + W5 + W6 + W7 + W8;
-      if (tong_W == 0) tong_W = 1;
+    float tong_W = W1 + W2 + W3 + W4 + W5 + W6 + W7 + W8 + W9;
+    if (tong_W == 0) tong_W = 1;
 
-      float v_L = (W1*L_pwm[0] + W2*L_pwm[1] + W3*L_pwm[2] + W4*L_pwm[3] + 
-                      W5*L_pwm[4] + W6*L_pwm[5] + W7*L_pwm[6] + W8*L_pwm[7]) / tong_W;
-      float v_R = (W1*R_pwm[0] + W2*R_pwm[1] + W3*R_pwm[2] + W4*R_pwm[3] + 
-                      W5*R_pwm[4] + W6*R_pwm[5] + W7*R_pwm[6] + W8*R_pwm[7]) / tong_W;
+    float v_L = (W1*L_pwm[0] + W2*L_pwm[1] + W3*L_pwm[2] + W4*L_pwm[3] + 
+                 W5*L_pwm[4] + W6*L_pwm[5] + W7*L_pwm[6] + W8*L_pwm[7] +
+                 W9*L_pwm[8]) / tong_W;
+    float v_R = (W1*R_pwm[0] + W2*R_pwm[1] + W3*R_pwm[2] + W4*R_pwm[3] + 
+                 W5*R_pwm[4] + W6*R_pwm[5] + W7*R_pwm[6] + W8*R_pwm[7] +
+                 W9*R_pwm[8]) / tong_W;
 
-      v_L = gioi_han(v_L, -650.0f, 650.0f);
-      v_R = gioi_han(v_R, -650.0f, 650.0f);
+    v_L = gioi_han(v_L, -650.0f, 650.0f);
+    v_R = gioi_han(v_R, -650.0f, 650.0f);
 
-      v_L_cu = gioi_han_toc_do(v_L_cu, (int)v_L, 120);
-      v_R_cu = gioi_han_toc_do(v_R_cu, (int)v_R, 120);
-      Di_chuyen(v_L_cu, v_R_cu);
-  }
+    if (d_sau_loc <= 16.0f && v_L < 0.0f && v_R < 0.0f)
+    {
+        if (huong_ne < 0)
+        {
+            v_L = -520.0f;
+            v_R = 520.0f;
+        }
+        else
+        {
+            v_L = 520.0f;
+            v_R = -520.0f;
+        }
+    }
+
+    v_L_cu = gioi_han_toc_do(v_L_cu, (int)v_L, 120);
+    v_R_cu = gioi_han_toc_do(v_R_cu, (int)v_R, 120);
+    Di_chuyen(v_L_cu, v_R_cu);
+}
 /* USER CODE END 4 */
 
 /**

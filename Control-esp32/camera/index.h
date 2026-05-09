@@ -8,13 +8,34 @@ const char index_html[] PROGMEM = R"=====(
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Robot Control Panel</title>
     <style>
-        body { 
-            font-family: 'Times New Roman', serif;
-            margin: 0; padding: 20px 10px; 
-            background-color: #e2e8f0;
-            display: flex; justify-content: center; align-items: center;
+        :root {
+            --bg: #eef2f7;
+            --panel: #ffffff;
+            --panel-2: #f8fafc;
+            --line: #d8e0ea;
+            --text: #172033;
+            --muted: #68768a;
+            --green: #12966b;
+            --blue: #1f7ab8;
+            --red: #d83b3b;
+            --amber: #b7791f;
+            --shadow: 0 14px 35px rgba(20, 32, 52, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Times New Roman", Times, serif;
+            margin: 0;
+            padding: 18px 12px;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
             min-height: 100vh;
-            user-select: none; -webkit-user-select: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .container {
@@ -22,58 +43,117 @@ const char index_html[] PROGMEM = R"=====(
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             width: 100%;
-            max-width: 760px;
-            align-items: stretch; 
+            max-width: 860px;
+            align-items: stretch;
         }
         
         .box {
-            background: #ffffff;
-            border: none;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         h3 { 
-            margin-top: 0; font-size: 16px; font-weight: bold;
-            color: #0f172a;
-            border-bottom: 2px solid #e2e8f0; 
-            padding-bottom: 10px; margin-bottom: 15px; width: 100%; 
-            text-transform: uppercase; letter-spacing: 1px;
-            text-align: center;
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 10px;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
         }
 
         .status { 
-            font-weight: bold; color: #64748b; margin-bottom: 12px; font-size: 13px; text-align: center; 
+            width: fit-content;
+            max-width: 100%;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 10px;
+            font-size: 13px;
+            padding: 5px 10px;
+            border: 1px solid #c8d4e3;
+            border-radius: 999px;
+            background: var(--panel-2);
+        }
+        .status::before {
+            content: "";
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            vertical-align: 1px;
         }
         
         .streamvideo { flex: 1; display: flex; flex-direction: column; }
         #stream {
-            width: 100%; height: 200px; 
-            border: none; border-radius: 8px;
-            background-color: #0f172a;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            width: 100%;
+            height: 240px;
+            border: 3px solid #111827;
+            border-radius: 8px;
+            background-color: #111827;
             object-fit: cover;
             margin-bottom: auto;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
         }
 
-        #sensor-val { margin-top: 20px; }
+        #sensor-val {
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 13px;
+        }
         .sensor-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 9px;
         }
         .sensor-card {
-            background: #f8fafc; border: 1px solid #e2e8f0;
-            border-radius: 10px; padding: 12px 10px; text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+            min-height: 58px;
         }
-        .sensor-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: bold; }
-        .sensor-value { font-size: 18px; font-weight: bold; color: #0f172a; }
-        .sensor-value span { font-size: 12px; color: #94a3b8; font-weight: normal; }
-        .val-fire { color: #ef4444; }
+        .sensor-card.fire-card {
+            grid-column: span 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-left: 4px solid var(--red);
+        }
+        .sensor-card.pwm-card {
+            border-left: 4px solid #9aa8ba;
+        }
+        .sensor-label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            margin-bottom: 5px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .sensor-value {
+            font-size: 20px;
+            line-height: 1.1;
+            font-weight: 800;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .sensor-value span { font-size: 12px; color: var(--muted); font-weight: 600; margin-left: 2px; }
+        .val-fire { color: var(--red); }
+        .val-forward { color: var(--green); }
+        .val-reverse { color: var(--amber); }
 
         .controlbox { flex: 1; display: flex; flex-direction: column; }
         #manual-controls { display: flex; flex-direction: column; flex: 1; }
@@ -92,44 +172,64 @@ const char index_html[] PROGMEM = R"=====(
         input:checked + .slider:before { transform: translateX(20px); }
 
         .joy-bg {
-            width: 170px; height: 170px;
-            background-color: #f8fafc; border: 3px solid #cbd5e1; border-radius: 50%;
-            position: relative; margin: 0 auto auto auto;
+            width: 178px; height: 178px;
+            background:
+                linear-gradient(var(--line), var(--line)) center / 1px 100% no-repeat,
+                linear-gradient(90deg, var(--line), var(--line)) center / 100% 1px no-repeat,
+                var(--panel-2);
+            border: 2px solid #b8c4d2;
+            border-radius: 50%;
+            position: relative; margin: 18px auto auto auto;
             display: flex; justify-content: center; align-items: center;
-            touch-action: none; box-shadow: inset 0 5px 15px rgba(0,0,0,0.05);
+            touch-action: none;
+            box-shadow: inset 0 5px 15px rgba(20,32,52,0.08);
         }
         .joy-stick {
-            width: 56px; height: 56px;
-            background: linear-gradient(135deg, #334155, #0f172a); border-radius: 50%;
-            position: absolute; cursor: grab; border: 2px solid #64748b;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4); transition: box-shadow 0.1s;
+            width: 58px; height: 58px;
+            background: #243044;
+            border-radius: 50%;
+            position: absolute;
+            cursor: grab;
+            border: 2px solid #516176;
+            box-shadow: 0 8px 18px rgba(20,32,52,0.35);
+            transition: box-shadow 0.1s;
         }
-        .joy-stick:active { cursor: grabbing; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        .joy-stick:active { cursor: grabbing; box-shadow: 0 3px 10px rgba(20,32,52,0.45); }
 
         .btn-control {
-            width: 100%; border: none; color: #ffffff;
-            padding: 14px; font-size: 14px; font-weight: bold; font-family: 'Times New Roman', serif;
-            cursor: pointer; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px;
-            transition: all 0.15s; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            width: 100%;
+            border: 0;
+            color: #ffffff;
+            padding: 13px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            font-family: "Times New Roman", Times, serif;
+            cursor: pointer;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+            transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+            box-shadow: 0 6px 12px rgba(20,32,52,0.16);
         }
-        .btn-control:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); filter: brightness(0.9); }
+        .btn-control:active { transform: translateY(2px); box-shadow: 0 2px 6px rgba(20,32,52,0.18); filter: brightness(0.92); }
         
-        .btn-auto { background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 10px; }
-        .btn-auto.active { background: #064e3b; box-shadow: inset 0 3px 6px rgba(0,0,0,0.4); } 
+        .btn-auto { background: var(--green); margin-bottom: 10px; }
+        .btn-auto.active { background: #0b5f45; box-shadow: inset 0 3px 7px rgba(0,0,0,0.28); } 
         
-        .btn-pump { background: linear-gradient(135deg, #ef4444, #dc2626); margin-top: 15px; }
-        .btn-pump.active { background: #7f1d1d; box-shadow: inset 0 3px 6px rgba(0,0,0,0.4); } 
+        .btn-pump { background: var(--red); margin-top: 15px; }
+        .btn-pump.active { background: #8e2424; box-shadow: inset 0 3px 7px rgba(0,0,0,0.28); } 
         
-        .btn-voi { background: linear-gradient(135deg, #0ea5e9, #0284c7); width: 48%; }
-        .btn-voi.pressing { background: #0369a1; box-shadow: inset 0 3px 6px rgba(0,0,0,0.4); } 
+        .btn-voi { background: var(--blue); width: calc(50% - 5px); }
+        .btn-voi.pressing { background: #155986; box-shadow: inset 0 3px 7px rgba(0,0,0,0.28); } 
         
-        .action-row { display: flex; justify-content: space-between; margin-top: 20px; }
+        .action-row { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
 
-        .disabled-ui { opacity: 0.4; pointer-events: none; filter: grayscale(50%); }
+        .disabled-ui { opacity: 0.45; pointer-events: none; filter: grayscale(50%); }
 
         @media (max-width: 650px) {
             .container { grid-template-columns: 1fr; }
             body { padding: 15px; }
+            #stream { height: 210px; }
         }
 
         @media (orientation: landscape) and (max-height: 500px) {
@@ -137,17 +237,17 @@ const char index_html[] PROGMEM = R"=====(
             .container { gap: 15px; }
             .box { padding: 15px; }
             
-            #stream { height: 130px; }
+            #stream { height: 130px; border-width: 2px; }
             h3 { font-size: 14px; margin-bottom: 8px; padding-bottom: 4px; }
             
             .sensor-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+            .sensor-card.fire-card { grid-column: span 3; }
             .sensor-card { padding: 6px 4px; border-radius: 6px; }
             .sensor-label { font-size: 9px; margin-bottom: 2px; }
             .sensor-value { font-size: 14px; }
             .sensor-value span { font-size: 10px; }
             
             .btn-control { padding: 10px; font-size: 12px; }
-            .toggle-container { margin: 8px 0; padding: 6px 10px; }
             .joy-bg { width: 130px; height: 130px; margin-top: 5px; }
             .joy-stick { width: 46px; height: 46px; }
             .action-row { margin-top: 10px; }
@@ -166,27 +266,19 @@ const char index_html[] PROGMEM = R"=====(
         
         <div class="box controlbox">
             <h3>Điều Khiển Robot</h3>
-            <button id="btn-auto" class="btn-control btn-auto">BẬT TỰ ĐỘNG</button>
+            <button id="btn-auto" class="btn-control btn-auto">Bật Tự Động</button>
             <div id="manual-controls">
-                
-                <div class="toggle-container">
-                    <span class="brake-label">Phanh Tự Động (ABS)</span>
-                    <label class="switch">
-                        <input type="checkbox" id="chk-brake" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
 
                 <div class="joy-bg" id="joy-bg">
                     <div class="joy-stick" id="joy-stick"></div>
                 </div>
                 
                 <div class="action-row">
-                    <button id="btn-v-left" class="btn-control btn-voi">QUAY TRÁI</button>
-                    <button id="btn-v-right" class="btn-control btn-voi">QUAY PHẢI</button>
+                    <button id="btn-v-left" class="btn-control btn-voi">Quay Trái</button>
+                    <button id="btn-v-right" class="btn-control btn-voi">Quay Phải</button>
                 </div>
                 
-                <button id="maybomnuoc" class="btn-control btn-pump">BẬT BƠM NƯỚC</button>
+                <button id="maybomnuoc" class="btn-control btn-pump">Bật Bơm Nước</button>
             </div>
         </div>
     </div>
@@ -205,34 +297,56 @@ const char index_html[] PROGMEM = R"=====(
 
         function connectWS() {
             ws = new WebSocket(gateway);
-            ws.onopen = () => { statusText.innerText = "Trạng thái: Đã kết nối"; statusText.style.color="#10b981"; };
-            ws.onclose = () => { statusText.innerText = "Trạng thái: Mất kết nối"; statusText.style.color="#ef4444"; setTimeout(connectWS, 2000); };
+            ws.onopen = () => { statusText.innerText = "Trạng thái: Đã kết nối"; statusText.style.color="#12966b"; };
+            ws.onclose = () => { statusText.innerText = "Trạng thái: Mất kết nối"; statusText.style.color="#d83b3b"; setTimeout(connectWS, 2000); };
             ws.onmessage = (e) => {
                 try {
                     let obj = JSON.parse(e.data);
-                    let fireColorClass = obj.C > 2000 ? "val-fire" : "";
+                    const c = Number(obj.C ?? 0);
+                    const g = Number(obj.G ?? 0);
+                    const f = Number(obj.F ?? 0);
+                    const l = Number(obj.L ?? 0);
+                    const r = Number(obj.R ?? 0);
+                    const b = Number(obj.B ?? 0);
+                    const ml = Number(obj.ML ?? 0);
+                    const mr = Number(obj.MR ?? 0);
+                    let fireColorClass = c > 2000 ? "val-fire" : "";
+                    let mlColorClass = ml > 0 ? "val-forward" : (ml < 0 ? "val-reverse" : "");
+                    let mrColorClass = mr > 0 ? "val-forward" : (mr < 0 ? "val-reverse" : "");
                     
                     document.getElementById('sensor-val').innerHTML = `
                         <div class="sensor-grid">
-                            <div class="sensor-card">
+                            <div class="sensor-card fire-card">
                                 <div class="sensor-label">Cường Độ Lửa</div>
-                                <div class="sensor-value ${fireColorClass}">${obj.C.toFixed(0)}</div>
+                                <div class="sensor-value ${fireColorClass}">${c.toFixed(0)}</div>
                             </div>
                             <div class="sensor-card">
                                 <div class="sensor-label">Góc Lệch</div>
-                                <div class="sensor-value">${obj.G.toFixed(0)}<span>°</span></div>
+                                <div class="sensor-value">${g.toFixed(0)}<span>°</span></div>
                             </div>
                             <div class="sensor-card">
                                 <div class="sensor-label">Trước</div>
-                                <div class="sensor-value">${obj.F}<span>cm</span></div>
+                                <div class="sensor-value">${f.toFixed(0)}<span>cm</span></div>
                             </div>
                             <div class="sensor-card">
                                 <div class="sensor-label">Trái</div>
-                                <div class="sensor-value">${obj.L}<span>cm</span></div>
+                                <div class="sensor-value">${l.toFixed(0)}<span>cm</span></div>
                             </div>
                             <div class="sensor-card">
                                 <div class="sensor-label">Phải</div>
-                                <div class="sensor-value">${obj.R}<span>cm</span></div>
+                                <div class="sensor-value">${r.toFixed(0)}<span>cm</span></div>
+                            </div>
+                            <div class="sensor-card">
+                                <div class="sensor-label">Sau</div>
+                                <div class="sensor-value">${b.toFixed(0)}<span>cm</span></div>
+                            </div>
+                            <div class="sensor-card pwm-card">
+                                <div class="sensor-label">PWM Trái</div>
+                                <div class="sensor-value ${mlColorClass}">${ml.toFixed(0)}</div>
+                            </div>
+                            <div class="sensor-card pwm-card">
+                                <div class="sensor-label">PWM Phải</div>
+                                <div class="sensor-value ${mrColorClass}">${mr.toFixed(0)}</div>
                             </div>
                         </div>
                     `;
@@ -243,9 +357,8 @@ const char index_html[] PROGMEM = R"=====(
         }
 
         function sendCommand() {
-            let autoBrake = document.getElementById('chk-brake').checked ? 1 : 0;
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ L: motorL, R: motorR, A: autoBrake, P: pumpActive, M: autoMode, V: vCmd }));
+                ws.send(JSON.stringify({ L: motorL, R: motorR, P: pumpActive, M: autoMode, V: vCmd }));
             }
         }
         setInterval(sendCommand, 200);
@@ -255,7 +368,7 @@ const char index_html[] PROGMEM = R"=====(
         btnAuto.onclick = function() {
             autoMode = (autoMode === 0) ? 1 : 0;
             this.classList.toggle('active', autoMode === 1);
-            this.innerText = autoMode ? "ĐANG CHẠY TỰ ĐỘNG" : "BẬT TỰ ĐỘNG";
+            this.innerText = autoMode ? "Đang Chạy Tự Động" : "Bật Tự Động";
             if(autoMode === 1) {
                 manualControls.classList.add('disabled-ui');
                 motorL = 0; motorR = 0; pumpActive = 0; vCmd = "";
@@ -264,11 +377,12 @@ const char index_html[] PROGMEM = R"=====(
             }
             sendCommand();
         };
+
         const btnPump = document.getElementById('maybomnuoc');
         btnPump.onclick = function() {
             pumpActive = (pumpActive === 0) ? 1 : 0;
             this.classList.toggle('active', pumpActive === 1);
-            this.innerText = pumpActive ? "TẮT BƠM NƯỚC" : "BẬT BƠM NƯỚC";
+            this.innerText = pumpActive ? "Tắt Bơm Nước" : "Bật Bơm Nước";
             sendCommand();
         };
 
@@ -288,7 +402,6 @@ const char index_html[] PROGMEM = R"=====(
                 btn.classList.remove('pressing'); 
                 sendCommand(); 
             };
-            
             btn.onpointerdown = start;
             btn.onpointerup = end;
             btn.onpointerleave = end; 
@@ -297,7 +410,7 @@ const char index_html[] PROGMEM = R"=====(
         handleVoi(btnVLeft, "Q");
         handleVoi(btnVRight, "E");
 
-        document.getElementById('chk-brake').onchange = sendCommand;
+        
 
         const bg = document.getElementById('joy-bg');
         const stick = document.getElementById('joy-stick');
