@@ -28,7 +28,7 @@ const char* password = "06120404";
 #define PCLK_GPIO_NUM 22
 
 
-String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0,\"B\":0,\"ML\":0,\"MR\":0}";
+String latest_sensor_data = "{\"C\":0,\"G\":0,\"F\":0,\"L\":0,\"R\":0,\"B\":0}";
 
 httpd_handle_t control_httpd = NULL; 
 httpd_handle_t stream_httpd = NULL;  
@@ -90,6 +90,7 @@ esp_err_t ws_handler(httpd_req_t *req) {
       if (ret == ESP_OK) {
         buf[ws_pkt.len] = 0;
         StaticJsonDocument<200> doc;
+        
         if (deserializeJson(doc, (char*)buf) == DeserializationError::Ok) {
           int L = doc["L"]; int R = doc["R"]; 
           int P = doc["P"]; int M = doc["M"];
@@ -116,16 +117,10 @@ esp_err_t ws_handler(httpd_req_t *req) {
           ws_resp.len = latest_sensor_data.length();
           ws_resp.type = HTTPD_WS_TYPE_TEXT;
           httpd_ws_send_frame(req, &ws_resp);
-        }
-        Serial.print(cmd);
-        httpd_ws_frame_t ws_resp;
-        memset(&ws_resp, 0, sizeof(httpd_ws_frame_t));
-        ws_resp.payload = (uint8_t*)latest_sensor_data.c_str();
-        ws_resp.len = latest_sensor_data.length();
-        ws_resp.type = HTTPD_WS_TYPE_TEXT;
+        } // Kết thúc xử lý JSON
         
-        httpd_ws_send_frame(req, &ws_resp);
-      }
+      } 
+      free(buf);
     }
   }
   return ret;

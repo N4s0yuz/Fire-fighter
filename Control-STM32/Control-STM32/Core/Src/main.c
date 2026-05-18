@@ -20,6 +20,7 @@
 #include "main.h"
 #include "string.h"
 #include "stdio.h"
+#include "math.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -63,9 +64,9 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
   #define NGUONG_DAP_LUA   4000
-  #define NGUONG_THEO_LUA  1000
+  #define NGUONG_THEO_LUA  1500
   #define LUA_ADC_GIAM_KHI_SANG 1
-  #define LUA_DELTA_MIN    100
+  #define LUA_DELTA_MIN    150
   uint16_t adc_tinh[5] = {0};
   float lua_loc[5] = {0};
   float TRONG_SO[5] = {-2.0, -1.0, 0.0, 1.0, 2.0};
@@ -93,7 +94,6 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 volatile char lenh_dieu_khien = '1';
-volatile int abs_on = 1;
 uint32_t flame_sensor = 0;
 uint32_t sieu_am = 0;
 uint32_t gui_esp32 = 0;
@@ -751,7 +751,6 @@ static void MX_GPIO_Init(void)
       __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servo_pwm);
   }
       
-
   void Di_chuyen(int v_L, int v_R) 
   {
       pwm_motor_trai = v_L;
@@ -779,9 +778,8 @@ static void MX_GPIO_Init(void)
   }
   void Send_ESP32_Data(void) {
       char data[160];
-      sprintf(data, "{\"C\":%d,\"G\":%d,\"F\":%d,\"L\":%d,\"R\":%d,\"B\":%d,\"ML\":%d,\"MR\":%d}\n", 
-              (int)cuong_do, (int)goc_lech, kc_truoc, kc_trai, kc_phai, kc_sau,
-              pwm_motor_trai, pwm_motor_phai);
+      sprintf(data, "{\"C\":%d,\"G\":%d,\"F\":%d,\"L\":%d,\"R\":%d,\"B\":%d}\n", 
+              (int)cuong_do, (int)goc_lech, kc_truoc, kc_trai, kc_phai, kc_sau);
       HAL_UART_Transmit(&huart1, (uint8_t*)data, strlen(data), 100);
   }
   void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -820,178 +818,139 @@ static void MX_GPIO_Init(void)
   }
 
 
-  float gioi_han(float x, float min, float max) {
-      if (x < min) return min;
-      if (x > max) return max;
-      return x;
-  }
+float gioi_han(float x, float min, float max) {
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
 
-  uint16_t loc_khoang_cach(uint16_t d, uint16_t gia_tri_cu) {
-      if (d == 0 || d > 250) return gia_tri_cu;
-      return d;
-  }
+uint16_t loc_khoang_cach(uint16_t d, uint16_t gia_tri_cu) {
+    if (d == 0 || d > 250) return gia_tri_cu;
+    return d;
+}
 
-  float cap_nhat_khoang_cach_loc(float gia_tri_cu, uint16_t gia_tri_moi) {
-      if ((float)gia_tri_moi < gia_tri_cu) {
-          return gia_tri_cu * 0.25f + (float)gia_tri_moi * 0.75f;
-      }
-      return gia_tri_cu * 0.7f + (float)gia_tri_moi * 0.3f;
-  }
+float cap_nhat_khoang_cach_loc(float gia_tri_cu, uint16_t gia_tri_moi) {
+    if ((float)gia_tri_moi < gia_tri_cu) {
+        return gia_tri_cu * 0.25f + (float)gia_tri_moi * 0.75f;
+    }
+    return gia_tri_cu * 0.7f + (float)gia_tri_moi * 0.3f;
+}
 
-  int gioi_han_toc_do(int hien_tai, int muc_tieu, int buoc) {
-      if (muc_tieu > hien_tai + buoc) return hien_tai + buoc;
-      if (muc_tieu < hien_tai - buoc) return hien_tai - buoc;
-      return muc_tieu;
-  }
+int gioi_han_toc_do(int hien_tai, int muc_tieu, int buoc) {
+    if (muc_tieu > hien_tai + buoc) return hien_tai + buoc;
+    if (muc_tieu < hien_tai - buoc) return hien_tai - buoc;
+    return muc_tieu;
+}
 
-  float tinh_do_gan_truoc(float d) {
-      if (d <= 18.0f) return 1.0f;
-      if (d >= 45.0f) return 0.0f;
-      return (45.0f - d) / 27.0f;
-  }
+float tinh_do_gan_truoc(float d) {
+    if (d <= 20.0f) return 1.0f;
+    if (d >= 44.0f) return 0.0f;
+    return (44.0f - d) / 24.0f;
+}
 
-  float tinh_do_gan_ben(float d) {
-      if (d <= 16.0f) return 1.0f;
-      if (d >= 34.0f) return 0.0f;
-      return (34.0f - d) / 18.0f;
-  }
+float tinh_do_gan_ben(float d) {
+    if (d <= 20.0f) return 1.0f;
+    if (d >= 36.0f) return 0.0f;
+    return (36.0f - d) / 16.0f;
+}
 
-  float tinh_do_gan_sau(float d) {
-      if (d <= 16.0f) return 1.0f;
-      if (d >= 36.0f) return 0.0f;
-      return (36.0f - d) / 20.0f;
-  }
+float tinh_do_gan_sau(float d) {
+    if (d <= 20.0f) return 1.0f;
+    if (d >= 36.0f) return 0.0f;
+    return (36.0f - d) / 16.0f;
+}
 
-  void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai, uint16_t d_sau) 
+void Thuat_toan_vat_can(uint16_t d_trai, uint16_t d_truoc, uint16_t d_phai, uint16_t d_sau)
 {
-    static float d_trai_loc = 60.0f;
+    static float d_trai_loc  = 60.0f;
     static float d_truoc_loc = 60.0f;
-    static float d_phai_loc = 60.0f;
-    static float d_sau_loc = 60.0f;
+    static float d_phai_loc  = 60.0f;
+    static float d_sau_loc   = 60.0f;
     static int v_L_cu = 0;
     static int v_R_cu = 0;
     static int huong_ne = 1;
 
-    d_trai = loc_khoang_cach(d_trai, (uint16_t)d_trai_loc);
+    d_trai  = loc_khoang_cach(d_trai,  (uint16_t)d_trai_loc);
     d_truoc = loc_khoang_cach(d_truoc, (uint16_t)d_truoc_loc);
-    d_phai = loc_khoang_cach(d_phai, (uint16_t)d_phai_loc);
-    d_sau = loc_khoang_cach(d_sau, (uint16_t)d_sau_loc);
+    d_phai  = loc_khoang_cach(d_phai,  (uint16_t)d_phai_loc);
+    d_sau   = loc_khoang_cach(d_sau,   (uint16_t)d_sau_loc);
 
-    d_trai_loc = cap_nhat_khoang_cach_loc(d_trai_loc, d_trai);
+    d_trai_loc  = cap_nhat_khoang_cach_loc(d_trai_loc,  d_trai);
     d_truoc_loc = cap_nhat_khoang_cach_loc(d_truoc_loc, d_truoc);
-    d_phai_loc = cap_nhat_khoang_cach_loc(d_phai_loc, d_phai);
-    d_sau_loc = cap_nhat_khoang_cach_loc(d_sau_loc, d_sau);
+    d_phai_loc  = cap_nhat_khoang_cach_loc(d_phai_loc,  d_phai);
+    d_sau_loc   = cap_nhat_khoang_cach_loc(d_sau_loc,   d_sau);
 
-    if (d_phai_loc > d_trai_loc + 4.0f) huong_ne = 1;
-    else if (d_trai_loc > d_phai_loc + 4.0f) huong_ne = -1;
-
-    if (d_truoc_loc <= 18.0f)
-      {
-          v_L_cu = -600;
-          v_R_cu = -600;
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_truoc_loc <= 23.0f)
-      {
-          if (huong_ne < 0)
-          {
-              v_L_cu = -620;
-              v_R_cu = 620;
-          }
-          else
-          {
-              v_L_cu = 620;
-              v_R_cu = -620;
-          }
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_truoc_loc <= 45.0f)
-      {
-          if (d_phai_loc > d_trai_loc + 2.0f) huong_ne = 1;
-          else if (d_trai_loc > d_phai_loc + 2.0f) huong_ne = -1;
-
-          if (huong_ne < 0)
-          {
-              v_L_cu = -450;
-              v_R_cu = 650;
-          }
-          else
-          {
-              v_L_cu = 650;
-              v_R_cu = -450;
-          }
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_trai_loc <= 14.0f && d_phai_loc <= 14.0f)
-      {
-          v_L_cu = -520;
-          v_R_cu = -520;
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_trai_loc <= 14.0f || d_phai_loc <= 14.0f)
-      {
-          if (d_trai_loc < d_phai_loc)
-          {
-              v_L_cu = 650;
-              v_R_cu = 250;
-          }
-          else
-          {
-              v_L_cu = 250;
-              v_R_cu = 650;
-          }
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_trai_loc <= 22.0f && d_phai_loc > d_trai_loc + 3.0f)
-      {
-          v_L_cu = 620;
-          v_R_cu = 320;
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-      if (d_phai_loc <= 22.0f && d_trai_loc > d_phai_loc + 4.0f)
-      {
-          v_L_cu = 320;
-          v_R_cu = 620;
-          Di_chuyen(v_L_cu, v_R_cu);
-          return;
-      }
-
-    if (d_trai_loc <= 22.0f && d_phai_loc > d_trai_loc + 4.0f)
+    // Chốt hướng né chống lắc
+    float sai_so = d_phai_loc - d_trai_loc;
+    if (d_truoc_loc >= 40.0f) 
     {
-        v_L_cu = 620;
-        v_R_cu = 320;
+        if (fabsf(sai_so) > 8.0f) 
+        {
+            huong_ne = (sai_so > 0) ? 1 : -1;
+        }
+    }
+
+    // --- XỬ LÝ LỆNH CỨNG (SÁT VẬT CẢN) ---
+    
+    if (d_truoc_loc <= 21.0f)
+    {
+        v_L_cu = -600; // Tăng lại lực lùi để thoát lẹ
+        v_R_cu = -600;
         Di_chuyen(v_L_cu, v_R_cu);
         return;
     }
 
-    if (d_phai_loc <= 22.0f && d_trai_loc > d_phai_loc + 4.0f)
+    if (d_truoc_loc <= 32.0f)
     {
-        v_L_cu = 320;
-        v_R_cu = 620;
+        if (huong_ne < 0) { v_L_cu = -600; v_R_cu =  600; }
+        else              { v_L_cu =  600; v_R_cu = -600; }
         Di_chuyen(v_L_cu, v_R_cu);
         return;
     }
 
-    float L_gan = tinh_do_gan_ben(d_trai_loc);  
-    float L_xa = 1.0f - L_gan;
-    float F_gan = tinh_do_gan_truoc(d_truoc_loc); 
-    float F_xa = 1.0f - F_gan;
-    float R_gan = tinh_do_gan_ben(d_phai_loc);  
-    float R_xa = 1.0f - R_gan;
+    if (d_trai_loc <= 20.0f && d_phai_loc <= 20.0f)
+    {
+        v_L_cu = -550;
+        v_R_cu = -550;
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
+
+    if (d_trai_loc <= 14.0f || d_phai_loc <= 14.0f)
+    {
+        // Vẫn giữ số dương để chạy tới nhưng tăng lực
+        if (d_trai_loc < d_phai_loc) { v_L_cu = 650; v_R_cu = 250; }
+        else                         { v_L_cu = 250; v_R_cu = 650; }
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
+
+    if (d_trai_loc <= 25.0f && d_phai_loc > d_trai_loc + 6.0f)
+    {
+        v_L_cu = 650;
+        v_R_cu = 350;
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
+
+    if (d_phai_loc <= 25.0f && d_trai_loc > d_phai_loc + 6.0f)
+    {
+        v_L_cu = 350;
+        v_R_cu = 650;
+        Di_chuyen(v_L_cu, v_R_cu);
+        return;
+    }
+
+    // --- FUZZY LOGIC (NE MƯỢT TỪ XA) ---
+    
+    float L_gan = tinh_do_gan_ben(d_trai_loc);
+    float L_xa  = 1.0f - L_gan;
+    float F_gan = tinh_do_gan_truoc(d_truoc_loc);
+    float F_xa  = 1.0f - F_gan;
+    float R_gan = tinh_do_gan_ben(d_phai_loc);
+    float R_xa  = 1.0f - R_gan;
     float B_gan = tinh_do_gan_sau(d_sau_loc);
-    float B_xa = 1.0f - B_gan;
+    float B_xa  = 1.0f - B_gan;
 
     float W1 = L_xa * F_xa * R_xa;
     float W2 = L_gan * F_xa * R_xa;
@@ -1000,51 +959,41 @@ static void MX_GPIO_Init(void)
     float W5 = L_gan * F_gan * R_xa;
     float W6 = L_xa * F_gan * R_gan;
     float W7 = L_gan * F_xa * R_gan;
-    float W8 = L_gan * F_gan * R_gan * B_xa;
-    float W9 = L_gan * F_gan * R_gan * B_gan;
+    float W8 = L_gan * F_gan * R_gan * B_xa;  
+    float W9 = L_gan * F_gan * R_gan * B_gan; 
 
-    float L_pwm[] = {620,  720,  320,  620,  650, -650,  460, -560,  560};
-    float R_pwm[] = {620,  320,  720, -620, -650,  650,  460, -560, -560};
+    // Đẩy PWM base lên 650, PWM rẽ tối thiểu là 250-280 để bánh đủ lực lăn
+    float L_pwm[] = {650,  680,  280,  650,  680,  250,  500, -550,    0};
+    float R_pwm[] = {650,  280,  680, -650,  250,  680,  500, -550,    0};
 
-    if (huong_ne < 0) {
-        L_pwm[3] = -520; R_pwm[3] =  520;
-        L_pwm[7] = -420; R_pwm[7] = -560;
-        L_pwm[8] = -560; R_pwm[8] =  560;
-    } else {
-        L_pwm[3] =  520; R_pwm[3] = -520;
-        L_pwm[7] = -560; R_pwm[7] = -420;
-        L_pwm[8] =  560; R_pwm[8] = -560;
+    if (huong_ne < 0) { // Né TRÁI
+        L_pwm[3] =  250; R_pwm[3] =  680;
+        L_pwm[7] = -400; R_pwm[7] = -550;
+        L_pwm[8] = -550; R_pwm[8] =  550;
+    } else {            // Né PHẢI
+        L_pwm[3] =  680; R_pwm[3] =  250;
+        L_pwm[7] = -550; R_pwm[7] = -400;
+        L_pwm[8] =  550; R_pwm[8] = -550;
     }
 
-    float tong_W = W1 + W2 + W3 + W4 + W5 + W6 + W7 + W8 + W9;
+    float tong_W = W1+W2+W3+W4+W5+W6+W7+W8+W9;
     if (tong_W == 0) tong_W = 1;
 
-    float v_L = (W1*L_pwm[0] + W2*L_pwm[1] + W3*L_pwm[2] + W4*L_pwm[3] + 
+    float v_L = (W1*L_pwm[0] + W2*L_pwm[1] + W3*L_pwm[2] + W4*L_pwm[3] +
                  W5*L_pwm[4] + W6*L_pwm[5] + W7*L_pwm[6] + W8*L_pwm[7] +
                  W9*L_pwm[8]) / tong_W;
-    float v_R = (W1*R_pwm[0] + W2*R_pwm[1] + W3*R_pwm[2] + W4*R_pwm[3] + 
+    float v_R = (W1*R_pwm[0] + W2*R_pwm[1] + W3*R_pwm[2] + W4*R_pwm[3] +
                  W5*R_pwm[4] + W6*R_pwm[5] + W7*R_pwm[6] + W8*R_pwm[7] +
                  W9*R_pwm[8]) / tong_W;
 
-    v_L = gioi_han(v_L, -650.0f, 650.0f);
-    v_R = gioi_han(v_R, -650.0f, 650.0f);
+    // Giới hạn xả lại lên 680
+    v_L = gioi_han(v_L, -680.0f, 680.0f);
+    v_R = gioi_han(v_R, -680.0f, 680.0f);
 
-    if (d_sau_loc <= 16.0f && v_L < 0.0f && v_R < 0.0f)
-    {
-        if (huong_ne < 0)
-        {
-            v_L = -520.0f;
-            v_R = 520.0f;
-        }
-        else
-        {
-            v_L = 520.0f;
-            v_R = -520.0f;
-        }
-    }
-
-    v_L_cu = gioi_han_toc_do(v_L_cu, (int)v_L, 120);
-    v_R_cu = gioi_han_toc_do(v_R_cu, (int)v_R, 120);
+    // Kéo bước gia tốc lên 150 để robot vọt nhanh hơn, không bị lề mề
+    v_L_cu = gioi_han_toc_do(v_L_cu, (int)v_L, 150);
+    v_R_cu = gioi_han_toc_do(v_R_cu, (int)v_R, 150);
+    
     Di_chuyen(v_L_cu, v_R_cu);
 }
 /* USER CODE END 4 */
